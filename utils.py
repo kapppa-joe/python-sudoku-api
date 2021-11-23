@@ -1,4 +1,27 @@
+from typing import Iterable
+import itertools
+
+
 BitTable = {}
+
+
+def all_unique(iter: Iterable) -> bool:
+    """ util function to check whether every element in iterable is unique
+    >>> all_unique('abcd')
+    True
+    >>> all_unique('apple')
+    False
+    >>> all_unique([1,2,3,4,5,6,7,8,9])
+    True
+    >>> all_unique([1,2,3,1,5,6,7,8,9])
+    False
+
+    Should return early.
+    >>> all_unique(itertools.chain(range(5), itertools.repeat(1)))
+    False
+    """
+    seen = set()
+    return not any(elem in seen or seen.add(elem) for elem in iter)
 
 
 def count_bit(num: int) -> int:
