@@ -1,6 +1,6 @@
 import itertools
 from typing import Iterable
-from utils import count_bit, all_unique
+from sudoku_api.core.utils import count_bit, all_unique
 from result import Ok, Err, Result
 
 
@@ -25,6 +25,7 @@ class Sudoku():
         self.number_of_cells = width ** 4
 
     def validate_puzzle_string(self, puzzle: str) -> Result[bool, str]:
+        # TODO: add checking for duplicate numbers
         """ Validate a string as a representation of Sudoku puzzle
         accept 0 or . to represent an empty cell
         DOES NOT check whether if it is a valid answer in Sudoku
@@ -46,6 +47,10 @@ class Sudoku():
         >>> sudoku.validate_puzzle_string('A.9..5.1.85.4...2432......1...69.83.9.....6.62.71...9......1945....4.37.4.3..6..1')
         Err('Invalid char in puzzle. Can only contain 0, . or number 1-9')
 
+        Return False if duplicated number in same row/column/square
+        >>> sudoku.validate_puzzle_string('113456789' + '0' * 72)
+        Err('Duplicated number found in row/column/square.')
+
         # For case of 2x2 puzzle, check for length = 16 and each char being 0-4.
         # >>> sudoku2x2 = Sudoku(width=2)
         # >>> sudoku2x2.validate_puzzle_string('12343412234141..')
@@ -61,40 +66,65 @@ class Sudoku():
             return Err(f'The length of puzzle is not correct. Should have exactly {self.number_of_cells} chars.')
         elif not all(char == '.' or (char.isnumeric() and int(char) <= self.max_num) for char in puzzle):
             return Err(f'Invalid char in puzzle. Can only contain 0, . or number 1-{self.max_num}')
+        elif not self.numbers_are_unique(puzzle):
+            return Err('Duplicated number found in row/column/square.')
         else:
             return Ok()
+
+    def numbers_are_unique(self, puzzle: str) -> bool:
+        """
+        verify whether every number in row/column/square is unique.
+        does strip out . and 0 before checking for uniqueness
+
+        >>> sudoku2x2 = Sudoku(width=2)
+        >>> sudoku2x2.numbers_are_unique('1234341223414123')
+        True
+        >>> sudoku2x2.numbers_are_unique('1234000000000000')
+        True
+        >>> sudoku2x2.numbers_are_unique('1134000000000000')
+        False
+        >>> sudoku2x2.numbers_are_unique('1234100000000000')
+        False
+        >>> sudoku2x2.numbers_are_unique('1234010000000000')
+        False
+        """
+        for iter in self.all_rows_columns_squares():
+            numbers_in_cell = (num
+                               for idx in iter if (num := puzzle[idx]) != '.' and num != '0')
+            if not all_unique(numbers_in_cell):
+                return False
+        return True
 
     def validate_solution(self, solution: str | Iterable[int]) -> Result[bool, str]:
         """ check whether a solution is a valid sudoku.
         >>> sudoku2x2 = Sudoku(width=2)
         >>> sudoku2x2.validate_solution('1234')
-        Err('Cannot interpret this solution. Either the length is not valid (should be exactly 16) or it contains invalid character (can only accept number 1 to 4)')
+        Err('The length of puzzle is not correct. Should have exactly 16 chars.')
 
         >>> sudoku2x2.validate_solution('1234341223414123')
         Ok(True)
 
         >>> sudoku2x2.validate_solution('1134341223414123')
-        Err('Duplicated number found in row/column/square. The solution is not valid.')
+        Err('Duplicated number found in row/column/square.')
 
         >>> sudoku2x2.validate_solution('5234341223414123')
-        Err('Cannot interpret this solution. Either the length is not valid (should be exactly 16) or it contains invalid character (can only accept number 1 to 4)')
+        Err('Solution contain invalid char. Should only have number 1-4')
 
         >>> sudoku2x2.validate_solution('0234341223414123')
-        Err('Solution contain invalid char. Should only have number 1 to 4')
+        Err('Solution contain invalid char. Should only have number 1-4')
+
+        >>> sudoku2x2.validate_solution('.234341223414123')
+        Err('Solution contain invalid char. Should only have number 1-4')
         """
         if isinstance(solution, Iterable):
             solution = ''.join(str(i) for i in solution)
 
+        for cell in solution:
+            if not (cell.isnumeric() and int(cell) > 0 and int(cell) <= self.max_num):
+                return Err(f'Solution contain invalid char. Should only have number 1-{self.max_num}')
         result = self.validate_puzzle_string(solution)
         if isinstance(result, Err):
-            return Err(f'Cannot interpret this solution. Either the length is not valid (should be exactly {self.number_of_cells}) or it contains invalid character (can only accept number 1 to {self.max_num})')
-        for cell in solution:
-            if not (cell.isnumeric and int(cell) > 0 and int(cell) <= self.max_num):
-                return Err(f'Solution contain invalid char. Should only have number 1 to {self.max_num}')
-        for iter in self.all_rows_columns_squares():
-            numbers_in_cell = (solution[idx] for idx in iter)
-            if not all_unique(numbers_in_cell):
-                return Err('Duplicated number found in row/column/square. The solution is not valid.')
+            return result
         return Ok()
 
     def row(self, n: int) -> Iterable[int]:
@@ -327,20 +357,19 @@ class Sudoku():
                 highest_bits = count_bit(candidates[cell])
         return fewest
 
-    def solve_puzzle(self, puzzle: str) -> Result[list[list[int]], 'str']:
+    def solve_puzzle(self, puzzle: str) -> Result[list[str], 'str']:
         """
         solve a sudoku puzzle by backtracking.
         >>> puzzle1 = "123434122341412."
         >>> sudoku2x2 = Sudoku(width=2)
         >>> sudoku2x2.solve_puzzle(puzzle1)
-        Ok([[1, 2, 3, 4, 3, 4, 1, 2, 2, 3, 4, 1, 4, 1, 2, 3]])
+        Ok(['1234341223414123'])
 
         >>> puzzle2 = "12343412........"
         >>> sudoku2x2 = Sudoku(width=2)
         >>> result = sudoku2x2.solve_puzzle(puzzle2)
         >>> result
-        Ok([[1, 2, 3, 4, 3, 4, 1, 2, 2, 1, 4, 3, 4, 3, 2, 1],
-           [1, 2, 3, 4, 3, 4, 1, 2, 2, 3, 4, 1, 4, 1, 2, 3]])
+        Ok(['1234341221434321', '1234341223414123'])
 
         >>> solutions = result.ok()
         >>> sudoku2x2.validate_solution(solutions[0])
@@ -351,15 +380,20 @@ class Sudoku():
         >>> puzzle3 = "..9..5.1.85.4....2432......1...69.83.9.....6.62.71...9......1945....4.37.4.3..6.."
         >>> sudoku = Sudoku()
         >>> sudoku.solve_puzzle(puzzle3)
-        Ok([[7, 6, 9, 2, 3, 5, 4, 1, 8, 8, 5, ... 8, 1, 6, 2, 5]])
+        Ok(['76923541885...81625'])
 
-        >>> puzzle4 = "123434122341312."
+        >>> puzzle4 = "123443123.....2."
         >>> sudoku2x2.solve_puzzle(puzzle4)
         Err('puzzle is unsolvable')
+
+        >>> puzzle5 = "1234567894567891237801234562316740958759123646905382073172659485428976319683415A2"
+        >>> sudoku.solve_puzzle(puzzle5)
+        Err('Invalid char in puzzle. Can only contain 0, . or number 1-9')
         """
 
-        if not self.validate_puzzle_string(puzzle):
-            return Err('cannot interpret this sudoku puzzle string')
+        validation_result = self.validate_puzzle_string(puzzle)
+        if validation_result.is_err():
+            return validation_result
 
         candidates = self.map_puzzle_to_candidates(puzzle)
         if any(candidate == 2 ** self.max_num - 1 for candidate in candidates):
@@ -371,12 +405,12 @@ class Sudoku():
         else:
             return Err('no solution was found.')
 
-    def solve(self, candidates: list[int]):
+    def solve(self, candidates: list[int]) -> list[str]:
         cell_to_try = self.fewest_candidate_cell(candidates)
         if cell_to_try == None:
             # no empty cells.
             # i.e. a solution is found.
-            solution = [-i for i in candidates]
+            solution = ''.join(str(-i) for i in candidates)
             return [solution]
 
         bit = candidates[cell_to_try]
