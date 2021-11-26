@@ -25,7 +25,6 @@ class Sudoku():
         self.number_of_cells = width ** 4
 
     def validate_puzzle_string(self, puzzle: str) -> Result[bool, str]:
-        # TODO: add checking for duplicate numbers
         """ Validate a string as a representation of Sudoku puzzle
         accept 0 or . to represent an empty cell
         DOES NOT check whether if it is a valid answer in Sudoku
@@ -280,10 +279,10 @@ class Sudoku():
         s = self.cell_to_square(idx)
         return itertools.chain(self.row(r), self.column(c), self.square(s))
 
-    def update_candidates(self, candidates: list[int], idx: int, number: int) -> list[int]:
+    def update_grid(self, grid: list[int], idx: int, number: int) -> list[int]:
         """
         update a list representation of number candidates in a sudoku.
-        candidate are represented by bits.
+        candidates are represented by bits.
         occupied cells are represented by negative nums
         e.g.:
         0: empty cell, all nums in 1-9 are valid
@@ -291,21 +290,21 @@ class Sudoku():
         511: (= 0b111111111) empty cell, all nums in 1-9 are not valid
         -3: cell occupied by number 3
         >>> sudoku = Sudoku()
-        >>> sudoku.update_candidates([0 for _ in range(81)], 0, 3)
+        >>> sudoku.update_grid([0 for _ in range(81)], 0, 3)
         [-3, 4, 4, 4, 4, 4, 4, 4, 4,
         4, 4, 4, 0, 0, 0, 0, 0, 0,
         4, 4, 4, 0, 0, 0, 0, 0, 0,
         4, 0, 0, 0, 0, 0, 0, 0, 0,
         4, 0, 0, ... 0]
         """
-        new_candidates = candidates.copy()
+        new_grid = grid.copy()
         for cell in self.same_row_column_square(idx):
-            if (new_candidates[cell] >= 0):
-                new_candidates[cell] |= (1 << (number - 1))
-        new_candidates[idx] = -number
-        return new_candidates
+            if (new_grid[cell] >= 0):
+                new_grid[cell] |= (1 << (number - 1))
+        new_grid[idx] = -number
+        return new_grid
 
-    def map_puzzle_to_candidates(self, puzzle: str) -> list[int]:
+    def map_puzzle_to_grid(self, puzzle: str) -> list[int]:
         """
         calculate the number candidates for each cell in a sudoku puzzle.
         valid numbers are represented by bits.
@@ -315,46 +314,46 @@ class Sudoku():
         511: (= 0b111111111) all nums in 1-9 are not valid
         >>> puzzle = '..3..4.22.4..1.3'
         >>> sudoku2x2 = Sudoku(width=2)
-        >>> sudoku2x2.map_puzzle_to_candidates(puzzle)
+        >>> sudoku2x2.map_puzzle_to_grid(puzzle)
         [14, 13, -3, 6, 10, -4, 14, -2, -2, 11, -4, 14, 7, -1, 13, -3]
         """
-        candidates = [0 for _ in range(self.max_num ** 2)]
+        grid = [0 for _ in range(self.max_num ** 2)]
         puzzle = puzzle.replace('.', '0')
         for idx in range(len(puzzle)):
             if puzzle[idx] != '0':
-                candidates = self.update_candidates(
-                    candidates, idx, int(puzzle[idx]))
-        return candidates
+                grid = self.update_grid(
+                    grid, idx, int(puzzle[idx]))
+        return grid
 
-    def fewest_candidate_cell(self, candidates: list[int]) -> int:
+    def fewest_candidate_cell(self, grid: list[int]) -> int:
         """
         return the empty cell with fewest possible candidate, by counting bits and find the cell with highest bits.
 
         It should pick the cell with most 1s in binary representation.
         >>> sudoku = Sudoku()
-        >>> candidates = [0b1100, 0b1101, 0b1001, 0b1111, 0b0011, 0b1001]
-        >>> sudoku.fewest_candidate_cell(candidates)
+        >>> grid = [0b1100, 0b1101, 0b1001, 0b1111, 0b0011, 0b1001]
+        >>> sudoku.fewest_candidate_cell(grid)
         3
-        >>> candidates2 = [1,3,5,7,9,12,2,31,4,5,32,4,6,15]
-        >>> sudoku.fewest_candidate_cell(candidates2)
+        >>> grid2 = [1,3,5,7,9,12,2,31,4,5,32,4,6,15]
+        >>> sudoku.fewest_candidate_cell(grid2)
         7
 
         Any negative numbers should be ignored.
-        >>> candidates3 = [1,3,5,7,12,-32,-1,-3,4]
-        >>> sudoku.fewest_candidate_cell(candidates3)
+        >>> grid3 = [1,3,5,7,12,-32,-1,-3,4]
+        >>> sudoku.fewest_candidate_cell(grid3)
         3
 
         Return None if all numbers are negagive.
-        >>> candidates4 = [-1, -3, -32, -7, -9, -1]
-        >>> print(sudoku.fewest_candidate_cell(candidates4))
+        >>> grid4 = [-1, -3, -32, -7, -9, -1]
+        >>> print(sudoku.fewest_candidate_cell(grid4))
         None
         """
         fewest = None
         highest_bits = -1
-        for cell in range(0, len(candidates)):
-            if candidates[cell] >= 0 and count_bit(candidates[cell]) > highest_bits:
+        for cell in range(0, len(grid)):
+            if grid[cell] >= 0 and count_bit(grid[cell]) > highest_bits:
                 fewest = cell
-                highest_bits = count_bit(candidates[cell])
+                highest_bits = count_bit(grid[cell])
         return fewest
 
     def solve_puzzle(self, puzzle: str) -> Result[list[str], 'str']:
@@ -395,25 +394,25 @@ class Sudoku():
         if validation_result.is_err():
             return validation_result
 
-        candidates = self.map_puzzle_to_candidates(puzzle)
-        if any(candidate == 2 ** self.max_num - 1 for candidate in candidates):
+        grid = self.map_puzzle_to_grid(puzzle)
+        if any(candidate == 2 ** self.max_num - 1 for candidate in grid):
             return Err('puzzle is unsolvable')
 
-        solutions = self.solve(candidates)
+        solutions = self.solve(grid)
         if solutions:
             return Ok(solutions)
         else:
             return Err('no solution was found.')
 
-    def solve(self, candidates: list[int]) -> list[str]:
-        cell_to_try = self.fewest_candidate_cell(candidates)
+    def solve(self, grid: list[int]) -> list[str]:
+        cell_to_try = self.fewest_candidate_cell(grid)
         if cell_to_try == None:
             # no empty cells.
             # i.e. a solution is found.
-            solution = ''.join(str(-i) for i in candidates)
+            solution = ''.join(str(-i) for i in grid)
             return [solution]
 
-        bit = candidates[cell_to_try]
+        bit = grid[cell_to_try]
         if bit == 2 ** self.max_num - 1:
             # found an empty cell which cannot fit any number.
             # i.e. puzzle is unsolvable at this point
@@ -428,9 +427,9 @@ class Sudoku():
                 pass
             else:
                 # last bit = 0. try to put this number into the cell.
-                new_candidates = self.update_candidates(
-                    candidates, cell_to_try, number_to_try)
-                solution_found = self.solve(new_candidates)
+                new_grid = self.update_grid(
+                    grid, cell_to_try, number_to_try)
+                solution_found = self.solve(new_grid)
                 if solution_found:
                     solutions += solution_found
                 if len(solutions) > 1:
@@ -440,8 +439,56 @@ class Sudoku():
             bit >>= 1
         return solutions
 
+    def evaluate_difficulty(self, puzzle: str, solution: str | None = None) -> int:
+        """
+        Calculate a difficulty score of a puzzle using an algorithm in this article https://dlbeer.co.nz/articles/sudoku.html
+        The difficulty score consists of two parts:
+        1. For the branching factor Bi of each node, summing (Bi - 1)^2. The total is branch difficulty score B
+        2. Count the empty cells E at the start.
+        Final score is given by B * 100 + E.
+
+        Due to limit of time & knowledge, here I used an simple implementation, which do not take in count the techniques used by human solvers. (i.e. 'set oriented freedom analysis' not implemented)
+
+        >>> very_easy_puzzle = "600037500030200704070018000059100203040372050007800001000004006700620000260503907"
+        >>> medium_puzzle = "000000270008270045040000008000567010005009007000040000200000401900010000650304792"
+        >>> very_hard_puzzle = "090004013460000207070000000150000390000058000600900005000740500000006109540000020"
+        >>> solver = Sudoku()
+        >>> solver.evaluate_difficulty(very_easy_puzzle)
+        46
+        >>> solver.evaluate_difficulty(medium_puzzle)
+        752
+        >>> solver.evaluate_difficulty(very_hard_puzzle)
+        1254
+        """
+        grid = self.map_puzzle_to_grid(puzzle)
+        if solution == None:
+            res = self.solve_puzzle(puzzle)
+            if res.is_err():
+                raise ValueError(
+                    "try to evaluate the difficulty of an unsolvable puzzle.")
+            solution = res.ok()[0]
+        empty_cells_score = sum(1 for cell in grid if cell >= 0)
+        branching_factors_score = 0
+
+        next_cell = self.fewest_candidate_cell(grid)
+        while next_cell != None:
+            bit = grid[next_cell]
+            branching_factor = self.max_num - count_bit(bit)
+            branching_factors_score += ((branching_factor - 1) ** 2) * 100
+            next_cell = self.fewest_candidate_cell(grid)
+            grid = self.update_grid(grid, next_cell, int(solution[next_cell]))
+            next_cell = self.fewest_candidate_cell(grid)
+
+        solution_2 = ''.join(str(-i) for i in grid)
+        if solution != solution_2:
+            raise RuntimeError("unknown error in calculating difficulty")
+
+        return empty_cells_score + branching_factors_score
+
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod(verbose=True, optionflags=doctest.ELLIPSIS |
-                    doctest.NORMALIZE_WHITESPACE)
+    sudoku = Sudoku()
+    puzzle = '000000270008270045040000008000567010005009007000040000200000401900010000650304792'
+    solution = '516438279398276145742951368823567914465129837179843526237695481984712653651384792'
+    grid = sudoku.map_puzzle_to_grid(puzzle)
+    sudoku.evaluate_difficulty(grid, solution)
