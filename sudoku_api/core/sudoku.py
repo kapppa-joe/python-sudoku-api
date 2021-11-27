@@ -1,5 +1,5 @@
 import itertools
-from typing import Iterable
+from typing import Iterable, Optional
 from sudoku_api.core.utils import count_bit, all_unique
 from result import Ok, Err, Result
 
@@ -256,7 +256,7 @@ class Sudoku():
         y_offset = (idx // self.width ** 3) * self.width
         return x_offset + y_offset
 
-    def same_row_column_square(self, idx: int) -> list[int]:
+    def same_row_column_square(self, idx: int) -> Iterable[int]:
         """ return an iterable of cells in same row/column/square.
         >>> sudoku = Sudoku()
         >>> set(sudoku.same_row_column_square(0))
@@ -325,7 +325,7 @@ class Sudoku():
                     grid, idx, int(puzzle[idx]))
         return grid
 
-    def fewest_candidate_cell(self, grid: list[int]) -> int:
+    def fewest_candidate_cell(self, grid: list[int]) -> Optional[int]:
         """
         return the empty cell with fewest possible candidate, by counting bits and find the cell with highest bits.
 
@@ -391,8 +391,8 @@ class Sudoku():
         """
 
         validation_result = self.validate_puzzle_string(puzzle)
-        if validation_result.is_err():
-            return validation_result
+        if err_msg := validation_result.err():
+            return Err(err_msg)
 
         grid = self.map_puzzle_to_grid(puzzle)
         if any(candidate == 2 ** self.max_num - 1 for candidate in grid):
@@ -417,7 +417,7 @@ class Sudoku():
             # found an empty cell which cannot fit any number.
             # i.e. puzzle is unsolvable at this point
             # do a backtrack at such situation
-            return None
+            return []
 
         solutions = []
         number_to_try = 1
@@ -461,12 +461,14 @@ class Sudoku():
         1254
         """
         grid = self.map_puzzle_to_grid(puzzle)
-        if solution == None:
+        if not solution:
             res = self.solve_puzzle(puzzle)
-            if res.is_err():
-                raise ValueError(
-                    "try to evaluate the difficulty of an unsolvable puzzle.")
-            solution = res.ok()[0]
+            solution = res.unwrap_or([None])[0]
+
+        if solution == None:
+            raise ValueError(
+                "try to evaluate the difficulty of an unsolvable puzzle.")
+
         empty_cells_score = sum(1 for cell in grid if cell >= 0)
         branching_factors_score = 0
 
@@ -475,7 +477,6 @@ class Sudoku():
             bit = grid[next_cell]
             branching_factor = self.max_num - count_bit(bit)
             branching_factors_score += ((branching_factor - 1) ** 2) * 100
-            next_cell = self.fewest_candidate_cell(grid)
             grid = self.update_grid(grid, next_cell, int(solution[next_cell]))
             next_cell = self.fewest_candidate_cell(grid)
 
@@ -490,5 +491,4 @@ if __name__ == "__main__":
     sudoku = Sudoku()
     puzzle = '000000270008270045040000008000567010005009007000040000200000401900010000650304792'
     solution = '516438279398276145742951368823567914465129837179843526237695481984712653651384792'
-    grid = sudoku.map_puzzle_to_grid(puzzle)
-    sudoku.evaluate_difficulty(grid, solution)
+    sudoku.evaluate_difficulty(puzzle, solution)
