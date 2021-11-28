@@ -1,11 +1,12 @@
 import itertools
+import random
 from typing import Iterable, Optional
-from sudoku_api.core.utils import count_bit, all_unique
+from sudoku_api.core.utils import conv_bit_to_num_list, count_bit, all_unique, replace_string
 from result import Ok, Err, Result
 
 
 class Sudoku():
-    def __init__(self, width=3):
+    def __init__(self, width: int = 3, height: int = None):
         """ return a new sudoku instance.
             width denotes the width of a square
             default to be the common 3x3 sudoku.
@@ -21,6 +22,7 @@ class Sudoku():
         4
         """
         self.width = width
+        self.height = height or self.width
         self.max_num = width ** 2
         self.number_of_cells = width ** 4
 
@@ -192,7 +194,8 @@ class Sudoku():
         return a nested iterable of cell numbers for all rows, columns, squares in a sudoku
         >>> sudoku2x2 = Sudoku(width=2)
         >>> [list(iter) for iter in sudoku2x2.all_rows_columns_squares()]
-        [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15], [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15], [0, 1, 4, 5], [2, 3, 6, 7], [8, 9, 12, 13], [10, 11, 14, 15]]
+        [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15], [0, 4, 8, 12], [1, 5, 9, 13], [
+            2, 6, 10, 14], [3, 7, 11, 15], [0, 1, 4, 5], [2, 3, 6, 7], [8, 9, 12, 13], [10, 11, 14, 15]]
         """
         return itertools.chain((self.row(i) for i in range(1, self.max_num + 1)), (self.column(i) for i in range(1, self.max_num + 1)), (self.square(i) for i in range(1, self.max_num + 1)))
 
@@ -439,7 +442,7 @@ class Sudoku():
             bit >>= 1
         return solutions
 
-    def evaluate_difficulty(self, puzzle: str, solution: str | None = None) -> int:
+    def evaluate_difficulty(self, puzzle: str, solution: str | None = None) -> Result[int, str]:
         """
         Calculate a difficulty score of a puzzle using an algorithm in this article https://dlbeer.co.nz/articles/sudoku.html
         The difficulty score consists of two parts:
@@ -452,22 +455,35 @@ class Sudoku():
         >>> very_easy_puzzle = "600037500030200704070018000059100203040372050007800001000004006700620000260503907"
         >>> medium_puzzle = "000000270008270045040000008000567010005009007000040000200000401900010000650304792"
         >>> very_hard_puzzle = "090004013460000207070000000150000390000058000600900005000740500000006109540000020"
+        >>> unsolvable_puzzle = "620037500030200704070018000059100203040372050007800001000004006700620000260503907"
+        >>> non_unique_puzzle = "123456789" + '0' * 72
+        >>>
         >>> solver = Sudoku()
         >>> solver.evaluate_difficulty(very_easy_puzzle)
-        46
+        Ok(46)
         >>> solver.evaluate_difficulty(medium_puzzle)
-        752
+        Ok(752)
         >>> solver.evaluate_difficulty(very_hard_puzzle)
-        1254
+        Ok(1254)
+        >>> solver.evaluate_difficulty(unsolvable_puzzle)
+        Err('puzzle is unsolvable')
+        >>> solver.evaluate_difficulty(non_unique_puzzle)
+        Err('solution to this puzzle is not unique')
         """
+
         grid = self.map_puzzle_to_grid(puzzle)
         if not solution:
             res = self.solve_puzzle(puzzle)
-            solution = res.unwrap_or([None])[0]
-
+            match res:
+                case Err():
+                    return Err("puzzle is unsolvable")
+                case Ok(solutions):
+                    if len(solutions) > 1:
+                        return Err('solution to this puzzle is not unique')
+                    else:
+                        solution = solutions[0]
         if solution == None:
-            raise ValueError(
-                "try to evaluate the difficulty of an unsolvable puzzle.")
+            return Err("puzzle is unsolvable")
 
         empty_cells_score = sum(1 for cell in grid if cell >= 0)
         branching_factors_score = 0
@@ -484,7 +500,142 @@ class Sudoku():
         if solution != solution_2:
             raise RuntimeError("unknown error in calculating difficulty")
 
-        return empty_cells_score + branching_factors_score
+        total_score = empty_cells_score + branching_factors_score
+        return Ok(total_score)
+
+    def has_unique_solution(self, puzzle: str) -> bool:
+        """
+        check whether a puzzle has an unique solution.
+        """
+        try_solve = self.solve_puzzle(puzzle)
+        count_solutions = len(try_solve.unwrap_or([]))
+        return count_solutions == 1
+
+    def random_digit_list(self) -> list[int]:
+        """
+        return a random shuffled list of numbers allowed in a row/column/square
+        >>> sudoku = Sudoku()
+        >>> list1 = sudoku.random_digit_list()
+        >>> len(list1)
+        9
+        >>> all((i in list1)for i in range(1, 9))
+        True
+        >>> random.seed('test')
+        >>> sudoku.random_digit_list()
+        [7, 3, 6, 8, 9, 1, 2, 4, 5]
+        >>> random.seed('test2')
+        >>> sudoku.random_digit_list()
+        [5, 9, 4, 2, 8, 3, 1, 6, 7]
+        """
+        num_list = [i for i in range(1, self.max_num + 1)]
+        random.shuffle(num_list)
+        return num_list
+
+    def available_numbers(self, bit: int) -> list[int]:
+        """
+        convert a bit notation of candidates to a list of number
+        >>> sudoku = Sudoku()
+        >>> sudoku.available_numbers(bit=0)
+        [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        >>> sudoku.available_numbers(bit=3)
+        [3, 4, 5, 6, 7, 8, 9]
+        >>> sudoku.available_numbers(bit=50)
+        [1, 3, 4, 7, 8, 9]
+        """
+        if bit < 0:
+            return []
+        elif bit == 0:
+            return [i for i in range(1, self.max_num + 1)]
+        else:
+            numbers_taken = conv_bit_to_num_list(bit)
+            return [i for i in range(1, self.max_num + 1) if not i in numbers_taken]
+
+    def random_solver(self, grid: list[int]) -> list[int]:
+        """
+        randomly generate a complete sudoku grid from a partially filled grid
+        """
+        next_cell = self.fewest_candidate_cell(grid)
+        if next_cell == None:
+            return grid
+
+        bit = grid[next_cell]
+        if bit == 2 ** self.max_num - 1:
+            return []
+
+        number_choices = self.available_numbers(bit)
+        random.shuffle(number_choices)
+        while number_choices:
+            number_to_try = number_choices.pop()
+            new_grid = self.update_grid(grid, next_cell, number_to_try)
+            solution_found = self.random_solver(new_grid)
+            if solution_found:
+                return solution_found
+        return []
+
+    def generate_puzzle(self, seed=None) -> str:
+        if not seed == None:
+            random.seed(seed)
+
+        solution = self.generate_random_solution()
+        base_puzzle = self.make_hole(solution)
+        puzzle = self.adjust_puzzle(
+            base_puzzle, solution, target_difficulty=600)
+        return puzzle
+
+    def generate_random_solution(self) -> str:
+        """
+        Generate a random Sudoku grid which is a valid solution.
+        """
+        first_row = self.random_digit_list()
+        grid = [0 for _ in range(self.number_of_cells)]
+        for (idx, number) in enumerate(first_row):
+            grid = self.update_grid(grid, idx, number)
+        filled_grid = self.random_solver(grid)
+        solution = ''.join(str(-i) for i in filled_grid)
+        return solution
+
+    def make_hole(self, p0: str) -> str:
+        """
+        randomly put 0s into filled grid to create a base puzzle to start from. check the puzzle to have unique solution before returning.
+        """
+        k = self.max_num * self.width  # empty cell to take away from initially
+
+        for _ in range(100):
+            cell_indices = list(range(self.number_of_cells))
+            random.shuffle(cell_indices)
+            cells_to_remove = cell_indices[0:k]
+            p1 = ''.join(
+                '0' if idx in cells_to_remove else p0[idx] for idx in range(len(p0)))
+            if self.has_unique_solution(p1):
+                return p1
+
+        # if after 100 trials still cannot get a puzzle with unique solutions:
+        raise RuntimeError('Error in generating puzzle.')
+
+    def adjust_puzzle(self, base_puzzle: str, solution: str, target_difficulty: int) -> str:
+        res = self.evaluate_difficulty(base_puzzle)
+        if res.is_err():
+            raise RuntimeError(res.err())
+        p0_score = res.unwrap_or(0)
+        p0 = base_puzzle
+        print("p0 score:", p0_score)
+
+        for _ in range(200):
+            idx = random.randint(0, self.number_of_cells - 1)
+            alt_idx = self.number_of_cells - idx - 1
+            if p0_score < target_difficulty:
+                p1 = replace_string(p0, idx, '0')
+                p1 = replace_string(p1, alt_idx, '0')
+            else:
+                p1 = replace_string(p0, idx, solution[idx])
+                p1 = replace_string(
+                    p1, alt_idx, solution[alt_idx])
+            p1_score = self.evaluate_difficulty(p1).unwrap_or(0)
+            # print("p1 score:", p1_score)
+            if p1_score and abs(p1_score - target_difficulty) < abs(p0_score - target_difficulty):
+                p0 = p1
+                p0_score = p1_score
+        return p0
 
 
 if __name__ == "__main__":
