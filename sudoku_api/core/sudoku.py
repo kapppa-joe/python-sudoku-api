@@ -598,12 +598,14 @@ class Sudoku():
         """
         randomly put 0s into filled grid to create a base puzzle to start from. check the puzzle to have unique solution before returning.
         """
-        k = self.max_num * self.width  # empty cell to take away from initially
+        k = self.max_num * self.width // 2  # pairs of empty cell to take away from initially
 
         for _ in range(100):
-            cell_indices = list(range(self.number_of_cells))
-            random.shuffle(cell_indices)
-            cells_to_remove = cell_indices[0:k]
+            cell_indices = list(range(self.number_of_cells // 2))
+            cells_to_remove = random.sample(cell_indices, k)
+            # also remove the cell which is rotational counterpart
+            cells_to_remove += [self.rotational_counterpart(idx)
+                                for idx in cells_to_remove]
             p1 = ''.join(
                 '0' if idx in cells_to_remove else p0[idx] for idx in range(len(p0)))
             if self.has_unique_solution(p1):
@@ -611,6 +613,23 @@ class Sudoku():
 
         # if after 100 trials still cannot get a puzzle with unique solutions:
         raise RuntimeError('Error in generating puzzle.')
+
+    def rotational_counterpart(self, idx: int) -> int:
+        """
+        return the cell idx of rotational counterpart of a cell
+        >>> sudoku = Sudoku()
+        >>> sudoku.rotational_counterpart(0)
+        80
+        >>> sudoku.rotational_counterpart(50)
+        30
+        >>> sudoku2x2 = Sudoku(width=2)
+        >>> sudoku.rotational_counterpart(0)
+        15
+        """
+        if idx >= 0 and idx < self.number_of_cells:
+            return self.number_of_cells - 1 - idx
+        else:
+            return 0
 
     def adjust_puzzle(self, base_puzzle: str, solution: str, target_difficulty: int) -> str:
         res = self.evaluate_difficulty(base_puzzle)
