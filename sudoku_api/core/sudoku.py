@@ -579,7 +579,7 @@ class Sudoku():
         solution = self.generate_random_solution()
         base_puzzle = self.make_hole(solution)
         puzzle = self.adjust_puzzle(
-            base_puzzle, solution, target_difficulty=600)
+            base_puzzle, solution, target_difficulty=1000)
         return puzzle
 
     def generate_random_solution(self) -> str:
@@ -621,20 +621,23 @@ class Sudoku():
         print("p0 score:", p0_score)
 
         for _ in range(200):
-            idx = random.randint(0, self.number_of_cells - 1)
-            alt_idx = self.number_of_cells - idx - 1
             if p0_score < target_difficulty:
+                idx = random.randint(0, len(p0) - 1)
+                while p0[idx] == '0':
+                    idx = random.randint(0, len(p0) - 1)
                 p1 = replace_string(p0, idx, '0')
-                p1 = replace_string(p1, alt_idx, '0')
             else:
+                idx = random.randint(0, len(p0) - 1)
+                while p0[idx] != '0':
+                    idx = random.randint(0, len(p0) - 1)
                 p1 = replace_string(p0, idx, solution[idx])
-                p1 = replace_string(
-                    p1, alt_idx, solution[alt_idx])
+
             p1_score = self.evaluate_difficulty(p1).unwrap_or(0)
-            # print("p1 score:", p1_score)
             if p1_score and abs(p1_score - target_difficulty) < abs(p0_score - target_difficulty):
                 p0 = p1
                 p0_score = p1_score
+            if abs(p0_score - target_difficulty) < 50:
+                return p0
         return p0
 
 
