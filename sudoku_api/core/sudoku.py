@@ -714,14 +714,31 @@ class Sudoku():
         else:
             return Err("solution not found at this route")
 
-    def generate_puzzle(self, seed=None) -> str:
+    def generate_puzzle(self, seed=None, target_difficulty: int = 400) -> str:
+        """
+        Generate a random sudoku puzzle
+        >>> sudoku = Sudoku()
+        >>> puzzle = sudoku.generate_puzzle()
+        >>> len(puzzle)
+        81
+        >>> sudoku.validate_puzzle_string(puzzle)
+        Ok(True)
+        >>> sudoku.has_unique_solution(puzzle)
+        True
+
+        will generate a fixed puzzle if a random seed is provided
+        >>> sudoku2x2 = Sudoku(width=2)
+        >>> sudoku2x2.generate_puzzle("test")
+        '2100000000000024'
+        """
+
         if not seed == None:
             random.seed(seed)
 
         solution = self.generate_random_solution()
         base_puzzle = self.make_hole(solution)
         puzzle = self.adjust_puzzle(
-            base_puzzle, solution, target_difficulty=1000)
+            base_puzzle, solution, target_difficulty)
         return puzzle
 
     def generate_random_solution(self) -> str:
@@ -773,27 +790,29 @@ class Sudoku():
         else:
             return 0
 
-    def adjust_puzzle(self, base_puzzle: str, solution: str, target_difficulty: int) -> str:
-        res = self.evaluate_difficulty(base_puzzle)
+    def adjust_puzzle(self, base_puzzle: str, solution: str, target_difficulty: int, rounds: int = 200) -> str:
+        res = self.sofa_evaluate_difficulty(base_puzzle)
         if res.is_err():
             raise RuntimeError(res.err())
         p0_score = res.unwrap_or(0)
         p0 = base_puzzle
-        print("p0 score:", p0_score)
 
-        for _ in range(200):
+        for _ in range(rounds):
             if p0_score < target_difficulty:
                 idx = random.randint(0, len(p0) - 1)
                 while p0[idx] == '0':
                     idx = random.randint(0, len(p0) - 1)
                 p1 = replace_string(p0, idx, '0')
+                p1 = replace_string(p1, self.rotational_counterpart(idx), '0')
             else:
                 idx = random.randint(0, len(p0) - 1)
                 while p0[idx] != '0':
                     idx = random.randint(0, len(p0) - 1)
+                alt_idx = self.rotational_counterpart(idx)
                 p1 = replace_string(p0, idx, solution[idx])
+                p1 = replace_string(p1, alt_idx, solution[alt_idx])
 
-            p1_score = self.evaluate_difficulty(p1).unwrap_or(0)
+            p1_score = self.sofa_evaluate_difficulty(p1).unwrap_or(0)
             if p1_score and abs(p1_score - target_difficulty) < abs(p0_score - target_difficulty):
                 p0 = p1
                 p0_score = p1_score
