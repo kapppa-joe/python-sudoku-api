@@ -355,6 +355,9 @@ class Sudoku():
             if grid[cell] >= 0 and count_bit(grid[cell]) > highest_bits:
                 fewest = cell
                 highest_bits = count_bit(grid[cell])
+                if highest_bits == self.max_num - 1:
+                    # return early if found a cell with only have 1 possible choice of number
+                    return fewest
         return fewest
 
     def solve_puzzle(self, puzzle: str) -> Result[list[str], 'str']:
@@ -570,10 +573,9 @@ class Sudoku():
                 return solution_found
         return []
 
-    # def sofa(self, grid: list[int]) -> list[int]:
-    #     """ set-oriented freedom analysis
-    #     # todo: run a naive solver, add a step to check sofa until n = lowest candidate num
-    #     """
+    def sofa(self, grid: list[int]) -> list[int]:
+        """ set-oriented freedom analysis
+        """
 
     def fewest_candidate_sofa_set(self, grid: list[int], upper_limit: int) -> Optional[Tuple[int, list[int]]]:
         """
