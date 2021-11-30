@@ -402,13 +402,13 @@ class Sudoku():
         if any(candidate == 2 ** self.max_num - 1 for candidate in grid):
             return Err('puzzle is unsolvable')
 
-        solutions = self.solve(grid)
+        solutions = self.naive_solve(grid)
         if solutions:
             return Ok(solutions)
         else:
             return Err('no solution was found.')
 
-    def solve(self, grid: list[int]) -> list[str]:
+    def naive_solve(self, grid: list[int]) -> list[str]:
         cell_to_try = self.fewest_candidate_cell(grid)
         if cell_to_try == None:
             # no empty cells.
@@ -433,7 +433,7 @@ class Sudoku():
                 # last bit = 0. try to put this number into the cell.
                 new_grid = self.update_grid(
                     grid, cell_to_try, number_to_try)
-                solution_found = self.solve(new_grid)
+                solution_found = self.naive_solve(new_grid)
                 if solution_found:
                     solutions += solution_found
                 if len(solutions) > 1:
@@ -573,9 +573,28 @@ class Sudoku():
                 return solution_found
         return []
 
-    def sofa(self, grid: list[int]) -> list[int]:
-        """ set-oriented freedom analysis
+    def sofa_evaluate_difficulty(self, puzzle: str) -> Result[int, str]:
         """
+        Calculate a difficulty score of a puzzle using an algorithm in this article https://dlbeer.co.nz/articles/sudoku.html
+        this method consider the SOFA (Set-oriented Freedom Analysis) approach if it yields a smaller candidate set
+        >>> sofa_puzzle = "534008010000002090000007604000500100100000003009001000305400000080200000060700382"
+        >>> sudoku = Sudoku()
+        >>> sudoku.evaluate_difficulty(sofa_puzzle)
+        Ok(655)
+        >>> sudoku.sofa_evaluate_difficulty(sofa_puzzle)
+        Ok(55)
+        """
+        grid = self.map_puzzle_to_grid(puzzle)
+        empty_cells_score = sum(1 for cell in grid if cell >= 0)
+        solver_result = self.sofa_solver_recur(grid)
+        if solver_result.is_ok():
+            branching_factors = solver_result.unwrap()
+            branching_factors_score = sum(
+                (b - 1) ** 2 for b in branching_factors) * 100
+            total_score = empty_cells_score + branching_factors_score
+            return Ok(total_score)
+        else:
+            return Err(solver_result.unwrap_err())
 
     def fewest_candidate_sofa_set(self, grid: list[int], upper_limit: int) -> Optional[Tuple[int, list[int]]]:
         """
@@ -607,6 +626,93 @@ class Sudoku():
             return (number, possible_pos_in_grid)
         else:
             return None
+
+    def sofa_solver_recur(self, grid: list[int], ensure_unique_solution=True) -> Result[list[int], str]:
+        next_cell = self.fewest_candidate_cell(grid)
+
+        if next_cell == None:
+            # no empty cells. i.e. a solution is found.
+            return Ok([])
+
+        bit = grid[next_cell]
+        if bit == 2 ** self.max_num - 1:
+            # found an empty cell which cannot fit any number.
+            # i.e. puzzle is unsolvable at this point
+            # do a backtrack at such situation
+            return Err('solution not found at this route')
+
+        branching_factor = self.max_num - count_bit(bit)
+        sofa_search_result = None
+        if branching_factor > 1:  # skip sofa search if bf is only 1.
+            sofa_search_result = self.fewest_candidate_sofa_set(
+                grid, branching_factor)
+        if sofa_search_result:
+            return self.solver_sofa_route(grid, sofa_search_result, ensure_unique_solution)
+        else:
+            return self.solver_non_sofa_route(grid, next_cell, ensure_unique_solution)
+
+    def solver_sofa_route(self, grid: list[int], sofa_search_result, ensure_unique_solution=True) -> Result[list[int], str]:
+        # sofa route
+        solution_already_found = False
+        (number, possible_pos_in_grid) = sofa_search_result
+        branching_factors = [len(possible_pos_in_grid)]
+        for idx in possible_pos_in_grid:
+            new_grid = self.update_grid(grid, idx, number)
+            solver_result = self.sofa_solver_recur(
+                new_grid, ensure_unique_solution)
+
+            match solver_result:
+                case Err("solution to this puzzle is not unique"):
+                    return solver_result
+                case Err(_):
+                    continue
+                case Ok(branching_factors_from_recur):
+                    # a solution was found.
+                    if ensure_unique_solution:
+                        if solution_already_found:
+                            return Err("solution to this puzzle is not unique")
+                        else:
+                            branching_factors += branching_factors_from_recur
+                            solution_already_found = True
+                    else:
+                        return Ok([branching_factors] + branching_factors_from_recur)
+        if solution_already_found:
+            return Ok(branching_factors)
+        else:
+            return Err("solution not found at this route")
+
+    def solver_non_sofa_route(self, grid: list[int], next_cell: int, ensure_unique_solution: bool) -> Result[list[int], str]:
+        solution_already_found = False
+        bit = grid[next_cell]
+        branching_factors = [self.max_num - count_bit(bit)]
+        number_to_try = 1
+        for number_to_try in range(1, self.max_num + 1):
+            if bit & 1 != 0:
+                bit >>= 1
+                continue
+            bit >>= 1
+            new_grid = self.update_grid(grid, next_cell, number_to_try)
+            solver_result = self.sofa_solver_recur(
+                new_grid, ensure_unique_solution)
+            match solver_result:
+                case Err("solution to this puzzle is not unique"):
+                    return solver_result
+                case Err(_):
+                    continue
+                case Ok(branching_factors_from_recur):
+                    # a solution was found.
+                    if ensure_unique_solution:
+                        if solution_already_found:
+                            return Err("solution to this puzzle is not unique")
+                        else:
+                            branching_factors += branching_factors_from_recur
+                            solution_already_found = True
+                    else:
+                        return Ok([branching_factors] + branching_factors_from_recur)
+        if solution_already_found:
+            return Ok(branching_factors)
+        else:
+            return Err("solution not found at this route")
 
     def generate_puzzle(self, seed=None) -> str:
         if not seed == None:
