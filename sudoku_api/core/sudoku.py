@@ -1,7 +1,7 @@
 import itertools
 import random
-from typing import Iterable, Optional
-from sudoku_api.core.utils import conv_bit_to_num_list, count_bit, all_unique, replace_string
+from typing import Iterable, Optional, Tuple
+from sudoku_api.core.utils import conv_bit_to_num_list, count_bit, all_unique, replace_string, sofa_find_candidate
 from result import Ok, Err, Result
 
 
@@ -194,9 +194,7 @@ class Sudoku():
         return a nested iterable of cell numbers for all rows, columns, squares in a sudoku
         >>> sudoku2x2 = Sudoku(width=2)
         >>> [list(iter) for iter in sudoku2x2.all_rows_columns_squares()]
-        [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15], [0, 4, 8, 12], [1, 5, 9, 13], [
-            2, 6, 10, 14], [3, 7, 11, 15], [0, 1, 4, 5], [2, 3, 6, 7], [8, 9, 12, 13], [10, 11, 14, 15]]
-        """
+        [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15], [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15], [0, 1, 4, 5], [2, 3, 6, 7], [8, 9, 12, 13], [10, 11, 14, 15]] """
         return itertools.chain((self.row(i) for i in range(1, self.max_num + 1)), (self.column(i) for i in range(1, self.max_num + 1)), (self.square(i) for i in range(1, self.max_num + 1)))
 
     def cell_to_row(self, idx: int) -> int:
@@ -572,6 +570,42 @@ class Sudoku():
                 return solution_found
         return []
 
+    # def sofa(self, grid: list[int]) -> list[int]:
+    #     """ set-oriented freedom analysis
+    #     # todo: run a naive solver, add a step to check sofa until n = lowest candidate num
+    #     """
+
+    def fewest_candidate_sofa_set(self, grid: list[int], upper_limit: int) -> Optional[Tuple[int, list[int]]]:
+        """
+        Traverse all the sets(=rows/columns/squares) in grid, and find a number which has the fewest possible position to take in a set
+        related to the concept of 'set-oriented freedom analysis' and 'hidden single'
+        >>> sofa_puzzle = "534008010000002090000007604000500100100000003009001000305400000080200000060700382"
+        >>> sudoku = Sudoku()
+        >>> grid = sudoku.map_puzzle_to_grid(sofa_puzzle)
+        >>> sudoku.fewest_candidate_sofa_set(grid, 3)
+        (2, [6])
+        """
+
+        number = None
+        possible_pos_in_grid = None
+
+        for cells_iter in self.all_rows_columns_squares():
+            cell_idxs_in_set = list(cells_iter)
+            bits = [grid[idx] for idx in cell_idxs_in_set]
+            candidate = sofa_find_candidate(bits, upper_limit, self.max_num)
+            if candidate:
+                (number, possible_positions) = candidate
+                possible_pos_in_grid = [cell_idxs_in_set[i]
+                                        for i in possible_positions]
+                if len(possible_positions) == 1:
+                    break  # return early if a number got only 1 free cell available
+                else:
+                    upper_limit = len(possible_positions)
+        if (number and possible_pos_in_grid):
+            return (number, possible_pos_in_grid)
+        else:
+            return None
+
     def generate_puzzle(self, seed=None) -> str:
         if not seed == None:
             random.seed(seed)
@@ -623,7 +657,7 @@ class Sudoku():
         >>> sudoku.rotational_counterpart(50)
         30
         >>> sudoku2x2 = Sudoku(width=2)
-        >>> sudoku.rotational_counterpart(0)
+        >>> sudoku2x2.rotational_counterpart(0)
         15
         """
         if idx >= 0 and idx < self.number_of_cells:

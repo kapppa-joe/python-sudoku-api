@@ -1,5 +1,5 @@
-from typing import Iterable
 import itertools
+from typing import Iterable, Optional, Tuple
 
 
 BitTable = {}
@@ -99,3 +99,47 @@ def replace_string(string: str, idx: int, char: str) -> str:
     if len(char) > 1:
         char = char[0]
     return string[0:idx] + char + string[idx+1:len(string)]
+
+
+def sofa_find_candidate(bits: list[int], sofa_upper_limit: int, max_num: int) -> Optional[Tuple[int, list[int]]]:
+    """
+    check a set (=row/column/square) for the number with fewest possible empty cell position.
+    related to the concept of 'set-oriented freedom analysis' and 'hidden single' technique
+
+    >>> set = [-5, -3, -4, 223, 223, -8, 445, -1, 447]
+    >>> sofa_find_candidate(set, 3, 9)
+    (2, [6])
+    >>> set2 = [287, 446, 286, 474, 450, -2, 303, -9, 303]
+    >>> sofa_find_candidate(set2, 3, 9)
+    (4, [4])
+    >>> set3 = [125, 252, 380, 250, 234, -7, -6, 489, -4]
+    >>> sofa_find_candidate(set3, 3, 9)
+    (5, [4, 7])
+    >>> set4 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    >>> print(sofa_find_candidate(set4, 3, 9))
+    None
+    >>> set5 = [63, 63, 63, -1, -2, -3, -4, -5, -6]
+    >>> print(sofa_find_candidate(set5, 3, 9))
+    None
+    >>> set6 = [63, 63, 127, -1, -2, -3, -4, -5, -6]
+    >>> print(sofa_find_candidate(set6, 3, 9))
+    (7, [0, 1])
+    """
+    result = None
+    for i in range(1, max_num + 1):  # traverse each sudoku numbers
+        check_bit = 1 << (i - 1)
+        seen = []
+        for (pos, bit) in enumerate(bits):
+            if bit < 0:  # bypass the negative bits, which represent occupied cells
+                continue
+            if bit & check_bit == 0:  # number i is valid for that cell
+                seen.append(pos)
+            if len(seen) >= sofa_upper_limit:
+                break
+        if seen and len(seen) < sofa_upper_limit:
+            result = (i, seen)
+            sofa_upper_limit = len(seen)
+        if seen == 1:  # return early if a number got only 1 free cell available
+            return result
+
+    return result
