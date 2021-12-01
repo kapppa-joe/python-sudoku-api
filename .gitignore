@@ -2,3 +2,5 @@ __pycache__
 .pytest_cache
 sudoku.txt
 debug_entry_point.py
+run_flask.sh
+.vscode
