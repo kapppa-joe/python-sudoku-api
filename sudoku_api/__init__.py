@@ -4,7 +4,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 from config import Config
+from sudoku_api.database import db
 from sudoku_api.controllers.solver_controller import Solver
+from sudoku_api.models.Puzzle import Puzzle
 
 
 class HelloWorld(Resource):
@@ -14,7 +16,7 @@ class HelloWorld(Resource):
 
 app = Flask(__name__)
 app.config.from_object(Config)
-db = SQLAlchemy(app)
+db.init_app(app)
 migrate = Migrate(app, db)
 
 # from app import models  # nopep8

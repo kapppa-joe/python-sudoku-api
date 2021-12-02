@@ -1,4 +1,4 @@
-from sudoku_api import db
+from sudoku_api.database import db
 
 
 class Puzzle(db.Model):
