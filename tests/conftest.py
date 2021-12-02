@@ -1,16 +1,18 @@
 import pytest
-from sudoku_api import create_app
+from sudoku_api import app as flask_app
 
 
 @pytest.fixture
 def app():
-    app = create_app({'TESTING': True})
-    return app
+    return flask_app
 
 
 @pytest.fixture
 def client(app):
-    return app.test_client()
+    test_client = app.test_client()
+
+    return test_client
+    # return app.test_client()
 
 
 @pytest.fixture
