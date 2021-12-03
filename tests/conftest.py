@@ -1,10 +1,10 @@
 import pytest
-from sudoku_api import app as flask_app
+from sudoku_api import create_app
 
 
 @pytest.fixture
 def app():
-    return flask_app
+    return create_app()
 
 
 @pytest.fixture

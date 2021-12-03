@@ -1,7 +1,5 @@
 from flask import Flask
 from flask_restful import Resource, Api
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 
 from config import Config
 from sudoku_api.database import db
@@ -14,15 +12,15 @@ class HelloWorld(Resource):
         return {'hello': 'world'}
 
 
-app = Flask(__name__)
-app.config.from_object(Config)
-db.init_app(app)
-migrate = Migrate(app, db)
+def create_app(test_config=None):
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    db.init_app(app)
 
-# from app import models  # nopep8
-api = Api(app)
-api.add_resource(HelloWorld, '/')
-api.add_resource(Solver, '/solver')
+    api = Api(app)
+    api.add_resource(HelloWorld, '/')
+    api.add_resource(Solver, '/solver')
+    return app
 
 # def create_app(test_config=None):
 #     # from sudoku_api.models.Puzzles import db
