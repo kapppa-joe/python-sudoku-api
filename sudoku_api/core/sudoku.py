@@ -714,22 +714,26 @@ class Sudoku():
         else:
             return Err("solution not found at this route")
 
-    def generate_puzzle(self, seed=None, target_difficulty: int = 400) -> str:
+    def generate_puzzle(self, seed=None, target_difficulty: int = 400) -> Tuple[str, str, int]:
         """
         Generate a random sudoku puzzle
         >>> sudoku = Sudoku()
-        >>> puzzle = sudoku.generate_puzzle()
+        >>> (puzzle, solution, score) = sudoku.generate_puzzle()
         >>> len(puzzle)
+        81
+        >>> len(solution)
         81
         >>> sudoku.validate_puzzle_string(puzzle)
         Ok(True)
         >>> sudoku.has_unique_solution(puzzle)
         True
+        >>> sudoku.solve_puzzle(puzzle).ok()[0] == solution
+        True
 
         will generate a fixed puzzle if a random seed is provided
         >>> sudoku2x2 = Sudoku(width=2)
         >>> sudoku2x2.generate_puzzle("test")
-        '2100000000000024'
+        ('2100000000000024', '2143341242311324', 12)
         """
 
         if not seed == None:
@@ -737,9 +741,9 @@ class Sudoku():
 
         solution = self.generate_random_solution()
         base_puzzle = self.make_hole(solution)
-        puzzle = self.adjust_puzzle(
+        (puzzle, score) = self.adjust_puzzle(
             base_puzzle, solution, target_difficulty)
-        return puzzle
+        return (puzzle, solution, score)
 
     def generate_random_solution(self) -> str:
         """
@@ -790,7 +794,19 @@ class Sudoku():
         else:
             return 0
 
-    def adjust_puzzle(self, base_puzzle: str, solution: str, target_difficulty: int, rounds: int = 200) -> str:
+    def adjust_puzzle(self, base_puzzle: str, solution: str, target_difficulty: int, rounds: int = 200) -> Tuple[str, int]:
+        """
+        adjust the difficulty of a puzzle by removing or adding back numbers in random cells
+        >>> sudoku = Sudoku()
+        >>> puzzle = "000000270008270045040000008000567010005009007000040000200000401900010000650304792"
+        >>> solution = "516438279398276145742951368823567914465129837179843526237695481984712653651384792"
+        >>> random.seed('test')
+        >>> sudoku.adjust_puzzle(puzzle, solution, 50)
+        ('000000270008270045040000308000567010005009007000040000207000401900010000650304792', 50)
+        >>> random.seed('test')
+        >>> sudoku.adjust_puzzle(puzzle, solution, 400)
+        ('000000270008270005040000008000067010005009007000040000200000401900010000650300090', 257)
+        """
         res = self.sofa_evaluate_difficulty(base_puzzle)
         if res.is_err():
             raise RuntimeError(res.err())
@@ -817,8 +833,8 @@ class Sudoku():
                 p0 = p1
                 p0_score = p1_score
             if abs(p0_score - target_difficulty) < 50:
-                return p0
-        return p0
+                return (p0, p0_score)
+        return (p0, p0_score)
 
 
 if __name__ == "__main__":
