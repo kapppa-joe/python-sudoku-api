@@ -714,7 +714,7 @@ class Sudoku():
         else:
             return Err("solution not found at this route")
 
-    def generate_puzzle(self, seed=None, target_difficulty: int = 400) -> Tuple[str, str, int]:
+    def generate_puzzle(self, seed=None, target_difficulty: int = 400, min_difficulty: int = 0) -> Tuple[str, str, int]:
         """
         Generate a random sudoku puzzle
         >>> sudoku = Sudoku()
@@ -734,15 +734,25 @@ class Sudoku():
         >>> sudoku2x2 = Sudoku(width=2)
         >>> sudoku2x2.generate_puzzle("test")
         ('2100000000000024', '2143341242311324', 12)
+
+        will generate a puzzle at least having min_difficulty if that arg was provided.
+        >>> (puzzle, solution, score) = sudoku.generate_puzzle(min_difficulty=300)
+        >>> score >= 300
+        True
         """
 
         if not seed == None:
             random.seed(seed)
 
-        solution = self.generate_random_solution()
-        base_puzzle = self.make_hole(solution)
-        (puzzle, score) = self.adjust_puzzle(
-            base_puzzle, solution, target_difficulty)
+        score = 0
+        puzzle = ""
+        solution = ""
+        while not score or score < min_difficulty:
+            solution = self.generate_random_solution()
+            base_puzzle = self.make_hole(solution)
+            (puzzle, score) = self.adjust_puzzle(
+                base_puzzle, solution, target_difficulty)
+
         return (puzzle, solution, score)
 
     def generate_random_solution(self) -> str:
