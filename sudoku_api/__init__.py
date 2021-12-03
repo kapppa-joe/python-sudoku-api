@@ -4,7 +4,7 @@ from flask_restful import Resource, Api
 from config import Config
 from sudoku_api.database import db
 from sudoku_api.controllers.solver_controller import Solver
-from sudoku_api.models.Puzzle import Puzzle
+from sudoku_api.controllers.puzzles_controller import Puzzle
 
 
 class HelloWorld(Resource):
@@ -18,10 +18,12 @@ def create_app(test_config=None):
     if test_config:
         app.config.from_mapping(test_config)
     db.init_app(app)
+    app.db = db
 
     api = Api(app)
     api.add_resource(HelloWorld, '/')
     api.add_resource(Solver, '/solver')
+    api.add_resource(Puzzle, '/puzzles')
     return app
 
 # def create_app(test_config=None):

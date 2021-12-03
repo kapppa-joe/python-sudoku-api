@@ -15,6 +15,14 @@ class Puzzle(db.Model):  # type: ignore
     def __repr__(self):
         return f'<Puzzle {self.puzzle}>'
 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+def get_puzzles():
+    query_result = Puzzle.query.filter_by(size="3x3").all()
+    return [puzzle.as_dict() for puzzle in query_result]
+
 
 def generate_puzzles(width: int = 3, height: int = 3, number: int = 20) -> list[Puzzle]:
     if number < 1:
