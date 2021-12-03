@@ -5,3 +5,4 @@ debug_entry_point.py
 .flaskenv
 run_flask.sh
 .vscode
+app.db

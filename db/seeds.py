@@ -4,9 +4,12 @@
 # from yourapp.models import User
 
 
-from sudoku_api.models.Puzzle import Puzzle
-from sudoku_api.core import Sudoku
-
+from sudoku_api.models.Puzzle import Puzzle, generate_puzzles
+from app import db
+puzzles = generate_puzzles()
+for p in puzzles:
+    db.session.add(p)
+db.session.commit()
 
 # initial_user = {
 #     'username': 'superadmin'
