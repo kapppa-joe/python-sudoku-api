@@ -37,6 +37,11 @@ def get_puzzles(id: int = 0, min_difficulty: int = 0):
     return [puzzle.as_dict() for puzzle in query_result]
 
 
+def get_puzzle_by_id(id: int):
+    puzzle = Puzzle.query.filter_by(id=id).first_or_404()
+    return puzzle_schema.dump(puzzle)
+
+
 def generate_puzzles(width: int = 3, height: int = 3, number: int = 20) -> list[Puzzle]:
     if number < 1:
         return []

@@ -17,10 +17,7 @@ def create_app(test_config=None):
     if test_config:
         app.config.from_mapping(test_config)
     db.init_app(app)
-    app.db = db
-    ma = configure_marshmallow(app)
-    # ma = Marshmallow(app)
-    # app.ma = ma
+    configure_marshmallow(app)
 
     from sudoku_api.controllers.solver_controller import Solver
     from sudoku_api.controllers.puzzles_controller import Puzzle
@@ -28,7 +25,7 @@ def create_app(test_config=None):
     api = Api(app)
     api.add_resource(HelloWorld, '/')
     api.add_resource(Solver, '/solver')
-    api.add_resource(Puzzle, '/puzzles')
+    api.add_resource(Puzzle, '/puzzles', '/puzzles/<int:puzzle_id>')
     return app
 
 # def create_app(test_config=None):
