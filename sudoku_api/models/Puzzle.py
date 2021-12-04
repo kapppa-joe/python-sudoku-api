@@ -1,5 +1,6 @@
 from sudoku_api.database import db
 from sudoku_api.core import Sudoku
+from sudoku_api.models.serializer import ma
 
 
 class Puzzle(db.Model):  # type: ignore
@@ -19,7 +20,19 @@ class Puzzle(db.Model):  # type: ignore
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-def get_puzzles():
+class PuzzleSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Puzzle
+
+
+puzzle_schema = PuzzleSchema()
+
+
+def to_json(p: Puzzle):
+    return puzzle_schema.dump(p)
+
+
+def get_puzzles(id: int = 0, min_difficulty: int = 0):
     query_result = Puzzle.query.filter_by(size="3x3").all()
     return [puzzle.as_dict() for puzzle in query_result]
 
