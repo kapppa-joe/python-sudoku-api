@@ -32,8 +32,21 @@ def to_json(p: Puzzle):
     return puzzle_schema.dump(p)
 
 
-def get_puzzles(id: int = 0, min_difficulty: int = 0):
-    query_result = Puzzle.query.filter_by(size="3x3").all()
+def get_puzzles(**kwargs):
+    filters = []
+    limit = kwargs.get("limit", 10)
+    offset = kwargs.get("offset", 0)
+    for (key, value) in kwargs.items():
+        match key:
+            case "min_difficulty":
+                filters.append(Puzzle.score >= value)
+            case "max_difficulty":
+                filters.append(Puzzle.score <= value)
+            case "size":
+                filters.append(Puzzle.size == value)
+
+    query_result = Puzzle.query.filter(*filters).limit(limit).offset(offset)
+    # print([puzzle.as_dict()["id"] for puzzle in query_result2])
     return [puzzle.as_dict() for puzzle in query_result]
 
 

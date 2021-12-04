@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_restful import Resource, Api
-# from flask_marshmallow import Marshmallow
 from config import Config
 from sudoku_api.database import db
 from sudoku_api.models.serializer import configure_marshmallow

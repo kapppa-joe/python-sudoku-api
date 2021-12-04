@@ -25,6 +25,14 @@ def test_puzzles_get(client):
 
 
 def test_puzzles_get_with_query(client):
+    # min_difficulty
+    # 200: response with puzzles with scores >= min_difficulty
+    response = client.get('/puzzles?min_difficulty=100')
+    assert response.status_code == 200
+    assert len(response.json["puzzles"]) > 0
+    for puzzle in response.json["puzzles"]:
+        assert puzzle["score"] >= 100
+
     # 400: min_difficulty must be an integer between 0 and 1000
     response = client.get('/puzzles?min_difficulty=-100')
     assert response.status_code == 400
@@ -32,6 +40,14 @@ def test_puzzles_get_with_query(client):
     response = client.get('/puzzles?min_difficulty=foo')
     assert response.status_code == 400
     assert response.json["message"] == "{'min_difficulty': ['Not a valid integer.']}"
+
+    # max_difficulty
+    # 200: response with puzzles with scores <= max_difficulty
+    response = client.get('/puzzles?max_difficulty=100')
+    assert response.status_code == 200
+    assert len(response.json["puzzles"]) > 0
+    for puzzle in response.json["puzzles"]:
+        assert puzzle["score"] <= 100
 
     # 400: max_difficulty must be an integer between 0 and 1000
     response = client.get('/puzzles?max_difficulty=2000')
@@ -41,6 +57,8 @@ def test_puzzles_get_with_query(client):
     assert response.status_code == 400
     assert response.json["message"] == "{'max_difficulty': ['Not a valid integer.']}"
 
+    # size
+    # 200: different size puzzle not implement yet
     # 400: size must be in form of AxB
     response = client.get('/puzzles?size=9')
     assert response.status_code == 400
@@ -49,6 +67,8 @@ def test_puzzles_get_with_query(client):
     assert response.status_code == 400
     assert response.json["message"] == "{'size': ['Size of puzzle must be in the format AxB, where A, B are integers between 2-9.']}"
 
+    # limit
+    # 200: response with a list of puzzles with max length = limit
     # 400: limit must be 10 or above
     response = client.get('/puzzles?limit=5')
     assert response.status_code == 400
@@ -57,6 +77,8 @@ def test_puzzles_get_with_query(client):
     assert response.status_code == 400
     assert response.json["message"] == "{'limit': ['Not a valid integer.']}"
 
+    # offset
+    # 200: response with a list of puzzles offseted by k place from the start
     # 400: offset must be 0 or above
     response = client.get('/puzzles?offset=-10')
     assert response.status_code == 400
