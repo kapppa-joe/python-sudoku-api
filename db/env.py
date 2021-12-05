@@ -4,7 +4,12 @@ from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
-from sudoku_api import create_app
+
+import os
+import sys  # nopep8
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # nopep8
+sys.path.append(BASE_DIR)  # nopep8
+from sudoku_api import create_app  # nopep8
 
 
 # There's no access to current_app here so we must create our own app.
