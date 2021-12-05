@@ -25,8 +25,8 @@ class Puzzle(Resource):
             if errors:
                 abort(400, str(errors))
             kwargs = request.args.to_dict()
-            puzzles = get_puzzles(**kwargs)
-            return {"puzzles": puzzles}
+            (puzzles, total_count) = get_puzzles(**kwargs)
+            return {"puzzles": puzzles, "total_count": total_count}
 
 
 def is_valid_puzzle_size(size: str):
