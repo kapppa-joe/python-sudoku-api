@@ -1,4 +1,4 @@
-from sudoku_api import create_app
+from sudoku_api import create_app, db
 
 app = create_app()
 if __name__ == '__main__':
