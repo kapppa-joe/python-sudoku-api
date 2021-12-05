@@ -2,6 +2,7 @@ from typing import Tuple
 from sudoku_api.database import db
 from sudoku_api.core import Sudoku
 from sudoku_api.models.serializer import ma
+from marshmallow import post_load
 
 
 class Puzzle(db.Model):  # type: ignore
@@ -24,6 +25,10 @@ class Puzzle(db.Model):  # type: ignore
 class PuzzleSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Puzzle
+
+    @post_load
+    def make_puzzle(self, data, **kwargs):
+        return Puzzle(**data)
 
 
 puzzle_schema = PuzzleSchema()
@@ -71,13 +76,14 @@ def get_puzzle_by_id(id: int):
     return puzzle_schema.dump(puzzle)
 
 
-def generate_puzzles(width: int = 3, height: int = 3, number: int = 20) -> list[Puzzle]:
+def generate_puzzles(width: int = 3, height: int = 3, number: int = 20, min_difficulty=0) -> list[Puzzle]:
     if number < 1:
         return []
     sudoku = Sudoku(width=width, height=height)
     puzzles = []
     for _ in range(number):
-        (puzzle, solution, score) = sudoku.generate_puzzle()
+        (puzzle, solution, score) = sudoku.generate_puzzle(
+            min_difficulty=min_difficulty)
         puzzles.append(Puzzle(puzzle=puzzle, solution=solution,
                        difficulty=score, size=f'{width}x{height}'))
     return puzzles
