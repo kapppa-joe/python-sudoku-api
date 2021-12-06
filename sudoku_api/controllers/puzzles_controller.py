@@ -5,15 +5,6 @@ from marshmallow import Schema, fields, validate, ValidationError
 
 from sudoku_api.models.Puzzle import get_puzzles, get_puzzle_by_id
 
-# params to support
-# min_difficulty
-# max_difficulty
-# size
-# limit
-# offset
-# sort_by
-# order
-
 
 class Puzzle(Resource):
     def get(self, puzzle_id: Optional[int] = None) -> Dict[str, Any]:
@@ -21,9 +12,10 @@ class Puzzle(Resource):
             puzzle = get_puzzle_by_id(puzzle_id)
             return {"puzzle": puzzle}
         else:
-            errors = puzzleQuerySchema.validate(request.args)
+            errors = puzzle_query_schema.validate(request.args)
             if errors:
                 abort(400, str(errors))
+
             kwargs = request.args.to_dict()
             (puzzles, total_count) = get_puzzles(**kwargs)
             return {"puzzles": puzzles, "total_count": total_count}
@@ -55,4 +47,4 @@ class PuzzleQuerySchema(Schema):
         ["asc", "desc"], error="Can only accept order of asc or desc."))
 
 
-puzzleQuerySchema = PuzzleQuerySchema()
+puzzle_query_schema = PuzzleQuerySchema()
