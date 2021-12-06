@@ -2,6 +2,7 @@ import itertools
 import random
 from typing import Iterable, Optional, Tuple
 from sudoku_api.core.utils import conv_bit_to_num_list, count_bit, all_unique, replace_string, sofa_find_candidate
+from sudoku_api.core.display import display_grid
 from result import Ok, Err, Result
 
 

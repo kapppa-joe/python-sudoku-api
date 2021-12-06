@@ -1,4 +1,4 @@
-from sudoku_api.core import Sudoku
+from sudoku_api.core.sudoku import Sudoku
 
 
 def solve_puzzle(puzzle: str):
