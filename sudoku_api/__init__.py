@@ -23,6 +23,6 @@ def create_app(test_config=None):
 
     api = Api(app)
     api.add_resource(HelloWorld, '/')
-    api.add_resource(Solver, '/solver')
-    api.add_resource(Puzzle, '/puzzles', '/puzzles/<int:puzzle_id>')
+    api.add_resource(Solver, '/api/solver')
+    api.add_resource(Puzzle, '/api/puzzles', '/api/puzzles/<int:puzzle_id>')
     return app
