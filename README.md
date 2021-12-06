@@ -2,7 +2,7 @@
 
 A RESTful API microservice which currently provide two services:
 
-1. Accept a sudoku puzzle and solve it for you
+1. Receive a sudoku puzzle and send back a solution.
 2. Supply a list of sudoku puzzles with various difficulties rank.
 
 The core of this program is a Sudoku solver / random puzzle generator written in python.
@@ -25,7 +25,7 @@ Format of request body:
 | :-------- | :------- | :---------------------------------------------------------------------------------------------------------- |
 | `puzzle`  | `string` | **Required**. A string of 81 digits, which represent a Sudoku puzzle. Use `.` or `0` to denote empty cells. |
 
-Example request:
+Example request body:
 
 ```json
 {

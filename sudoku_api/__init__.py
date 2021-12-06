@@ -10,6 +10,11 @@ class HelloWorld(Resource):
         return {'hello': 'world'}
 
 
+class Intro(Resource):
+    def get(self):
+        return {'message': 'Welcome to sudoku-api! Please read https://github.com/kapppa-joe/python-sudoku-api for how to interact with this API service.'}
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -23,6 +28,7 @@ def create_app(test_config=None):
 
     api = Api(app)
     api.add_resource(HelloWorld, '/')
+    api.add_resource(Intro, '/api/')
     api.add_resource(Solver, '/api/solver')
     api.add_resource(Puzzle, '/api/puzzles', '/api/puzzles/<int:puzzle_id>')
     return app
