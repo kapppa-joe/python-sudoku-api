@@ -21,25 +21,36 @@ The core of this program is a Sudoku solver / random puzzle generator written in
 
 Format of request body:
 
-| Parameter         | Type     | Description                                                                                                 |
-| :---------------- | :------- | :---------------------------------------------------------------------------------------------------------- |
-| `puzzle`          | `string` | **Required**. A string of 81 digits, which represent a Sudoku puzzle. Use `.` or `0` to denote empty cells. |
-| `display_as_grid` | `bool`   | Optional. If set to True, the API will respond with a plain-text ASCII art of the solution Sudoku           |
+| Parameter         | Type     | Description                                                                                                                                                    |
+| :---------------- | :------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `puzzle`          | `string` | **Required**. A string of 81 digits, which represent a Sudoku puzzle. Use `.` or `0` to denote empty cells.                                                    |
+| `display_as_grid` | `bool`   | Optional. If set to true, the API will respond with a plain-text ASCII art of the Sudoku solution. Otherwise the solution will be a string. Default is `false` |
 
 Example request body:
 
 ```json
 {
-  "puzzle": "000000270008270045040000008000567010005009007000040000200000401900010000650304792"
+  "puzzle": "000000270008270045040000008000567010005009007000040000200000401900010000650304792",
+  "display_as_grid": "true"
 }
 ```
 
 Response:
 
-```json
-{
-  "solution": "516438279398276145742951368823567914465129837179843526237695481984712653651384792"
-}
+```plaintext
++-------+-------+-------+
+| 5 1 6 | 4 3 8 | 2 7 9 |
+| 3 9 8 | 2 7 6 | 1 4 5 |
+| 7 4 2 | 9 5 1 | 3 6 8 |
++-------+-------+-------+
+| 8 2 3 | 5 6 7 | 9 1 4 |
+| 4 6 5 | 1 2 9 | 8 3 7 |
+| 1 7 9 | 8 4 3 | 5 2 6 |
++-------+-------+-------+
+| 2 3 7 | 6 9 5 | 4 8 1 |
+| 9 8 4 | 7 1 2 | 6 5 3 |
+| 6 5 1 | 3 8 4 | 7 9 2 |
++-------+-------+-------+
 ```
 
 Meaning of params in response body:
