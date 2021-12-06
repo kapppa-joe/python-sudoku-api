@@ -7,7 +7,7 @@ A RESTful API microservice which currently provide two services:
 
 The core of this program is a Sudoku solver / random puzzle generator written in python.
 
-[Click here to see a running demo.](https://sudoku-solver-12345.herokuapp.com/)
+[Click here to see a running demo.](https://sudoku-solver-12345.herokuapp.com/api/)
 
 ---
 
