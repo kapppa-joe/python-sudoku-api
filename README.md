@@ -21,9 +21,10 @@ The core of this program is a Sudoku solver / random puzzle generator written in
 
 Format of request body:
 
-| Parameter | Type     | Description                                                                                                 |
-| :-------- | :------- | :---------------------------------------------------------------------------------------------------------- |
-| `puzzle`  | `string` | **Required**. A string of 81 digits, which represent a Sudoku puzzle. Use `.` or `0` to denote empty cells. |
+| Parameter         | Type     | Description                                                                                                 |
+| :---------------- | :------- | :---------------------------------------------------------------------------------------------------------- |
+| `puzzle`          | `string` | **Required**. A string of 81 digits, which represent a Sudoku puzzle. Use `.` or `0` to denote empty cells. |
+| `display_as_grid` | `bool`   | Optional. If set to True, the API will respond with a plain-text ASCII art of the solution Sudoku           |
 
 Example request body:
 
